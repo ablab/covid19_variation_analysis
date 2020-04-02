@@ -7,9 +7,6 @@ import argparse
 from os import listdir
 from os.path import isfile, join
 
-minimap2 = ""
-picard = ""
-k8 = ""
 #also cleanups header from spaces and some other bad chars 
 def split_fasta(filename, outputdir):
     if not os.path.isdir(outputdir):
@@ -29,11 +26,12 @@ def split_fasta(filename, outputdir):
 
 def parse_args(args):
 ###### Command Line Argument Parser
-    parser = argparse.ArgumentParser(description="Script for construction of large vcf file from GISAID SARS-CoV2 DB. Output: all_sarscov2.vcf")
+    parser = argparse.ArgumentParser(description="Script for construction of large vcf file from GISAID SARS-CoV2 DB.")
     parser._action_groups.pop()
     required_args = parser.add_argument_group('required arguments')
     required_args.add_argument('--ref', required = True, help='Path to reference (NC_045512.2 aka MN908947) file')
     required_args.add_argument('--multifasta', required = True, help='Path to multifasta with SARS-CoV2 strains')
+    required_args.add_argument('--out', required = True, help='Path to output file')
     optional_args = parser.add_argument_group('optional arguments')
     optional_args.add_argument('--minimap2', help='Path to minimap2 distribution')    
     optional_args.add_argument('--picard', help='Path to a folder with picard https://broadinstitute.github.io/picard/  script')
@@ -46,7 +44,21 @@ def parse_args(args):
 
 
 
-def construct_vcf(ref, merged):
+def construct_vcf(args):
+    minimap2 = ""
+    picard = ""
+    k8 = ""
+
+    ref = args.ref
+    merged = args.multifasta
+    outfile = args.out
+    if args.minimap2:
+        minimap2= args.minimap2
+    if args.k8:
+        k8=args.k8
+    if args.picard:
+        picard = args.picard
+
     splitted = "splitted"
     vcfs = "vcfs"
     if not os.path.isdir(splitted):
@@ -68,16 +80,11 @@ def construct_vcf(ref, merged):
         if f.find("_bat_")== -1 and f.find("pangolin") == -1:
             vcflist.write(os.path.join(vcfs, f) + "\n")
     vcflist.close()
-    os.system("java -jar " + os.path.join(picard, "picard.jar") + " MergeVcfs I=vcfs.list O=all_sarscov2.vcf")
+    os.system("java -jar " + os.path.join(picard, "picard.jar") + " MergeVcfs I=vcfs.list O=" + outfile)
 
 #if len(sys.argv) != 3:
 #    print "Usage: " + sys.argv[0] + " ref multifasta "
 #    exit()
-args = parse_args(sys.argv[1:])
-if args.minimap2:
-    minimap2= args.minimap2
-if args.k8:
-    k8=args.k8
-if args.picard:
-    picard = args.picard
-construct_vcf(args.ref, args.multifasta)
+if __name__ == "__main__":
+    args = parse_args(sys.argv[1:])
+    construct_vcf(args)

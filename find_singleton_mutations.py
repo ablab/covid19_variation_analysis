@@ -8,10 +8,8 @@ from datetime import date
 from genericpath import isdir, exists
 from os.path import join
 from joblib import Parallel, delayed
-#import check_mash
 
 #MN908947.3      29706   .       G       T       60      .       QNAME=hCoV-19_Iceland_232_2020_EPI_ISL_417560_2020-03-17;QSTART=29706;QSTRAND=+ GT      1/1
-ref_id = "MN908947.3"
 
 
 def get_date(str_date):
@@ -42,15 +40,25 @@ def compare(a, b):
         elif a> b:
             return 1
         else:
-             return 0
+            return 0
 
+def is_snp_line(line):
+    arr = line.split()
+    if len(arr) >=9 and arr[0] != "#CHROM":
+        return True
+    else:
+        return False
+
+def vcfline_to_id(line):
+    arr = line.split()
+    id = arr[1] + "_" + arr[3] + "_" + arr[4]
+    return id
 def parse(infile, before):
     table = {}
     limit = get_date(before)
     for line in open (infile, 'r'):
-        arr = line.split()
-        if arr[0] == ref_id:
-            id = arr[1] + "_" + arr[3] + "_" + arr[4]
+        if is_snp_line(line):
+            id = vcfline_to_id(line)
             if  not (id in table.keys()):
                 table[id] = []
             table[id].append(line.strip())
@@ -70,11 +78,11 @@ def parse(infile, before):
     for u in old_sorted:
         print (u)
 
-
-
-if len(sys.argv) != 3:
-    print ("Usage: "+ sys.argv[0] + " snps.vcf date \n, date should be in YYYY-MM-DD format. Searches for all unique snps in given vcf and returns only those of them that happened before given date")
-infile = sys.argv[1]
-before = sys.argv[2]
-time = 0
-parse(infile, before)
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print ("Usage: "+ sys.argv[0] + " snps.vcf date \n Date should be in YYYY-MM-DD format. This script searches for all unique snps in given vcf and returns only those of them that happened before given date")
+        exit()
+    infile = sys.argv[1]
+    before = sys.argv[2]
+    time = 0
+    parse(infile, before)
