@@ -73,7 +73,7 @@ def parse(infile, before):
 
 
 if len(sys.argv) != 3:
-    print ("Usage: "+ sys.argv[0] + " snps.vcf date \n, date should be in YYYY-MM-DD format. Returns all unique snps happened before given date")
+    print ("Usage: "+ sys.argv[0] + " snps.vcf date \n, date should be in YYYY-MM-DD format. Searches for all unique snps in given vcf and returns only those of them that happened before given date")
 infile = sys.argv[1]
 before = sys.argv[2]
 time = 0
