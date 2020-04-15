@@ -49,6 +49,13 @@ def is_snp_line(line):
     else:
         return False
 
+def is_valid_indel(line):
+    arr = line.split()
+    if len(arr[3]) != len(arr[4]) and arr[3].find("N") == -1 and arr[4].find("N") == -1:
+        return True
+    else:
+        return False
+
 def vcfline_to_id(line):
     arr = line.split()
     id = arr[1] + "_" + arr[3] + "_" + arr[4]
