@@ -74,7 +74,13 @@ def construct_vcf(args):
 
     for f in listdir(splitted):
         l = (os.path.join(minimap2, "minimap2") + " -c --cs " + ref + " " + os.path.join(splitted, f) + " 2>/dev/null | sort -k6,6 -k8,8n | " + k8 + " " +  os.path.join(minimap2, "misc","paftools.js") + " call -L20000 -f " + ref + " -  > " + os.path.join(vcfs, os.path.basename(f) + ".vcf"))
-        os.system (os.path.join(minimap2, "minimap2") + " -c --cs " + ref + " " + os.path.join(splitted, f) + " 2>/dev/null | sort -k6,6 -k8,8n | " + k8 + " " +  os.path.join(minimap2, "misc","paftools.js") + " call -L20000 -f " + ref + " -  > " + os.path.join(vcfs, os.path.basename(f) + ".vcf"))
+        paf_file = os.path.join(splitted, os.path.basename(f) +".paf")
+        minimap2_str = os.path.join(minimap2, "minimap2") + " -c --cs  " + ref + " " + os.path.join(splitted, f) +" > " +paf_file  + " 2>/dev/null"
+#        print minimap2_str
+        paftools_str = "sort -k6,6 -k8,8n " + paf_file +" | " + k8 + " " +  os.path.join(minimap2, "misc","paftools.js") + " call -L20000 -f " + ref + " -  > " + os.path.join(vcfs, os.path.basename(f) + ".vcf")
+        os.system(minimap2_str)
+        os.system(paftools_str)
+#  os.system (os.path.join(minimap2, "minimap2") + " -c --cs " + ref + " " + os.path.join(splitted, f) + " 2>/dev/null | sort -k6,6 -k8,8n | " + k8 + " " +  os.path.join(minimap2, "misc","paftools.js") + " call -L20000 -f " + ref + " -  > " + os.path.join(vcfs, os.path.basename(f) + ".vcf"))
     vcflist = open("vcfs.list", "w")
     for f in listdir(vcfs):
         if f.find("_bat_")== -1 and f.find("pangolin") == -1:
