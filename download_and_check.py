@@ -26,6 +26,7 @@ work_pref =  "/Bmo/dantipov/covid/run_01_06/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 
 #modified to report N in snp list
+#change line 516 to if (br != 'n' /* && bq != 'n'*/) {
 fixed_paftools = "/home/dantipov/scripts/covid/paftools_N.js"
 k8 = "/home/dantipov/scripts/covid/k8-0.2.4/k8-Linux"
 big_fasta ="/home/dantipov/scripts/covid/sequences_2020-05-25_16-36.fasta"
