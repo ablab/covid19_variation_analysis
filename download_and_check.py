@@ -24,6 +24,8 @@ data_pref = "/Bmo/dantipov/data/sars_qc/"
 #work_pref = "/Bmo/dantipov/covid/run_old/"
 work_pref =  "/Bmo/dantipov/covid/run_01_06/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
+
+#modified to report N in snp list
 fixed_paftools = "/home/dantipov/scripts/covid/paftools_N.js"
 k8 = "/home/dantipov/scripts/covid/k8-0.2.4/k8-Linux"
 big_fasta ="/home/dantipov/scripts/covid/sequences_2020-05-25_16-36.fasta"
@@ -86,16 +88,24 @@ def extract_all_nextstrain(ids):
         count +=1
 #        if count == 100:
 #            break
+
 def run_sample(sample_descr):
     srr = sample_descr[0]
+#    if srr != "SRR11771929":
+#        return
     gisaid = sample_descr[-1]
     workdir = join(work_pref, srr)
     if not os.path.isdir (workdir):
         os.mkdir(workdir)
-    res = extract_nextstrain_id(srr, gisaid, workdir)
-    print res
-    if res != 0:
+    if os.path.exists(join(workdir, srr+".report")):
+        print srr + " exists"
         return
+    
+    res = extract_nextstrain_id(srr, gisaid, workdir)
+    if res != 0:       
+        print "reference extraction failed " + srr
+        return
+    print "Processing " + srr
     process_sample(sample_descr, workdir)
 
 def process_list(inputlist, outdir):
@@ -280,6 +290,8 @@ def map_sample(sample_descr, workdir):
 def process_sample(sample_descr, workdir):
     srr_id = sample_descr[0]
     if not os.path.isfile(join(data_pref, srr_id+ "_1.fastq.gz")):
+        return
+    if sample_descr[2] == "PAIRED" and not os.path.isfile(join(data_pref, srr_id+ "_2.fastq.gz")):
         return
     print sample_descr
     map_sample(sample_descr, workdir)
