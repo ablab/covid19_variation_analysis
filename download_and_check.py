@@ -22,7 +22,7 @@ minimap2 = "~/other_tools/minimap2/minimap2"
 ref = "/home/dantipov/scripts/covid/MN908947.3.fasta"
 data_pref = "/Bmo/dantipov/data/sars_qc/"
 #work_pref = "/Bmo/dantipov/covid/run_old/"
-work_pref =  "/Bmo/dantipov/covid/run_30_05/"
+work_pref =  "/Bmo/dantipov/covid/run_01_06/"
 sra_tools =  "/home/dantipov/other_tools/sratoolkit.2.10.7-ubuntu64/bin/"
 fixed_paftools = "/home/dantipov/scripts/covid/paftools_N.js"
 k8 = "/home/dantipov/scripts/covid/k8-0.2.4/k8-Linux"
@@ -46,6 +46,7 @@ def extract_reference(srr, gisaid, workdir):
     outfile = join(workdir, srr +".fasta")
     line = samtools + " faidx "  + big_fasta + " \""+ gisaid +"\" > " + outfile
     res = os.system(line) >> 8
+    print line
     if res != 0:
         return 0
     grep_line = ("grep \">\" " + outfile + " | wc -l ")
@@ -53,14 +54,14 @@ def extract_reference(srr, gisaid, workdir):
     print int(output)
     return int(output)
 
-def extract_nextstrain_id(str):
+def extract_nextstrain_id(srr, gisaid, workdir):
     end_str = "/20"
-    pos = str[1].find(end_str)
+    pos = gisaid.find(end_str)
     if pos == -1:
         return -1
 #/2020 length
     pos += 5
-    cropped = str[1][:pos]
+    cropped = gisaid[:pos]
     arr = cropped.split("/")
     if len(arr) < 3:
         return -1
@@ -68,8 +69,8 @@ def extract_nextstrain_id(str):
         arr[-3] = "Denmark"
         arr[-2] = arr[-2].replace("ALAB-HH-", "ALAB-HH")
     new_str = arr[-3] + "/" + arr[-2] + "/" + arr[-1]
-    print str[0] + " " + new_str
-    if extract_reference(str[0], new_str, work_tmp)  != 1:
+    print srr + " " + new_str
+    if extract_reference(srr, new_str, workdir)  != 1:
         return -1
     return 0
 
@@ -85,21 +86,17 @@ def extract_all_nextstrain(ids):
         count +=1
 #        if count == 100:
 #            break
-def run_sample(name):
-    srr = name[0]
-    gisaid = name[1]
-    if srr != "SRR11494525":
-        return
+def run_sample(sample_descr):
+    srr = sample_descr[0]
+    gisaid = sample_descr[-1]
     workdir = join(work_pref, srr)
     if not os.path.isdir (workdir):
         os.mkdir(workdir)
-    res = extract_reference(srr, gisaid, workdir)
-    if res != 1:
+    res = extract_nextstrain_id(srr, gisaid, workdir)
+    print res
+    if res != 0:
         return
-    if not os.path.isfile(join(data_pref, srr+ "_2.fastq.gz")):
-        return
-    process_sample(srr, workdir)
-    print "extracted"
+    process_sample(sample_descr, workdir)
 
 def process_list(inputlist, outdir):
     random.seed(239)
@@ -196,7 +193,7 @@ def out_array(arr):
     res += str(arr[len(arr) - 1])
     return res
 
-def analyze_sample(srr_id, workdir):
+def analyze_sample(srr_id, workdir, tech):
     paf_file = os.path.join(workdir, srr_id +".paf")
     vcf_file = os.path.join(workdir, srr_id +".vcf")
     depth_file = os.path.join(workdir, srr_id +".depth")
@@ -231,7 +228,8 @@ def analyze_sample(srr_id, workdir):
 #    print unsupported_0
     report_f = open(report_file, "w")
     report_f.write("name\t" + paf['name'] + "\n")
-    report_f.write("untreported_leading_N\t" + str(extra_leading) + "\n")
+    report_f.write("tech\t" + tech + "\n")
+    report_f.write("unreported_leading_N\t" + str(extra_leading) + "\n")
     report_f.write("unreported_trailing_N\t" + str(extra_trailing) + "\n")
     report_f.write("ZERO_covered_snps\t" + out_array(zero_covered_snps)  + "\n")
     report_f.write("low_covered_snps\t" + out_array(low_covered_snps) + "\n")
@@ -250,11 +248,18 @@ def run_minimap_reference (ref, query,srr_id, workdir):
     os.system(minimap2_str)
     os.system(paftools_str)
 
-def map_sample(srr_id, workdir):
-#TODO: here be check for tech and paired
+def map_sample(sample_descr, workdir):
+    srr_id = sample_descr[0]
     if  not os.path.isdir (workdir):
         os.mkdir(workdir)
-    minimap_str = get_minimap_illumina_paired(srr_id, workdir)
+    if sample_descr[-2] == "OXFORD_NANOPORE":
+#TODO elif ionTORRENT    
+        minimap_str = get_minimap_nanopore(srr_id, workdir)
+    elif sample_descr[2] == "PAIRED":
+        minimap_str = get_minimap_illumina_paired(srr_id, workdir)
+    else:
+        minimap_str = get_minimap_illumina_single(srr_id, workdir)
+    print minimap_str
     sorted_bam = join (workdir, srr_id + ".sorted.bam")
     sam_f =  join(workdir, srr_id + ".sam")
     sort_str = samtools + " sort " + sam_f + " > " + sorted_bam
@@ -272,11 +277,15 @@ def map_sample(srr_id, workdir):
 # samtools depth -a SRR11494470.sorted.bam SRR11494470.sorted.depth
 # samtools mpileup -uf MN908947.3.fasta SRR11494470.sorted.sam | ~/other_tools/bcftools/bcftools call -mv > SRR11494470.vcf
 
-def process_sample(srr_id, workdir):
-#    map_sample(srr_id, workdir)
+def process_sample(sample_descr, workdir):
+    srr_id = sample_descr[0]
+    if not os.path.isfile(join(data_pref, srr_id+ "_1.fastq.gz")):
+        return
+    print sample_descr
+    map_sample(sample_descr, workdir)
     query = join(workdir, srr_id + ".fasta")
     run_minimap_reference(ref, query, srr_id, workdir)
-    analyze_sample(srr_id, workdir)
+    analyze_sample(srr_id, workdir, sample_descr[-2])
 
 def savelist(names, outfile):
     outf = open (outfile, "w")
@@ -301,26 +310,30 @@ if __name__ == "__main__":
 #reader = csv.reader(data, delimiter=',')     
     to_download = []
     nextstrain_ids = []
+    data_descr = []
     for name in open (big_list, "r"):
         arr = list(csv.reader(StringIO(name)))[0]
-
-        print arr[0] + " " + arr[7] + " " + arr[8] + " " + arr[12]
-
+#SRR MYSEQ PAIRED ILLUMINA
+#        print arr[0] + " " + arr[7] + " " + arr[8] + " " + arr[12]
+        tmp = [arr[0], arr[7], arr[8], arr[12]]
         for i in range (0, len(arr)):
             if arr[i].find("/2020") != -1 or arr[i].find("/2019") != -1:
 #                print (str(i) +" " + arr[i])
-                nextstrain_ids.append([arr[0],arr[i]])
-                to_download.append(arr[0])                               
+                tmp.append(arr[i])
+                data_descr.append(tmp)
                 break
-    exit()
-    extract_all_nextstrain(nextstrain_ids)
+#                nextstrain_ids.append([arr[0],arr[i]])
+#                to_download.append(arr[0])                               
+#                break
+#    exit()
+#    extract_all_nextstrain(nextstrain_ids)
 #                download_sample(arr[0], data_pref)
     
 #    Parallel(n_jobs= 10) (delayed(download_sample)(srr, data_pref)
 #    for srr in to_download)
 #    names = create_download_list (big_list)       
-#    Parallel(n_jobs=10)(delayed(run_sample)(name)
-#    for name  in names)
+    Parallel(n_jobs=10)(delayed(run_sample)(sample_descr)
+    for sample_descr  in data_descr)
 
 
 
