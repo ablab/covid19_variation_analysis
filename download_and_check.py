@@ -246,8 +246,8 @@ def analyze_sample(srr_id, workdir, tech):
     report_f.write("low_covered_snps\t" + out_array(low_covered_snps) + "\n")
     report_f.write("missing_N\t" + out_array(sorted(unsupported_0))+ "\n")
 #    if paf['qstart'] != 0 or paf['qend'] != paf['qlen']:
-    report_f.write("unmapped_leading "+ str(paf['qstart']) + "\n")
-    report_f.write("unmapped_trailing "+ str(paf['qlen'] - paf['qend']) + "\n")
+    report_f.write("unmapped_leading\t"+ str(paf['qstart']) + "\n")
+    report_f.write("unmapped_trailing\t"+ str(paf['qlen'] - paf['qend']) + "\n")
    
 def run_minimap_reference (ref, query,srr_id, workdir):
     paf_file = os.path.join(workdir, srr_id +".paf")
